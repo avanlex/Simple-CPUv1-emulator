@@ -1,6 +1,9 @@
 import java.nio.ByteBuffer
 import kotlin.experimental.and
 
+private val Byte.toBinaryString: String
+    get() {return String.format("%8s", Integer.toBinaryString(this.toInt() and 0xFF)).replace(' ', '0')}
+
 class Processor(simpleSystem: SimpleSystem) {
 
     var pc : Byte = 0
@@ -104,14 +107,16 @@ class Processor(simpleSystem: SimpleSystem) {
         EXECUTE
         INCREMENT
      */
+    
     private fun decode() {
 
         val byteBuf: ByteBuffer = ByteBuffer.allocate(2)
         byteBuf.putShort(ir)
         opcode = byteBuf[0]
         val data = byteBuf[1]
-        val opString = String.format("%8s", Integer.toBinaryString(opcode.toInt() and 0xFF)).replace(' ', '0')
-        val dataString = String.format("%8s", Integer.toBinaryString(data.toInt() and 0xFF)).replace(' ', '0')
+
+        val opString = opcode.toBinaryString
+        val dataString = data.toBinaryString
 
         val DEBUG = false
 
@@ -137,62 +142,51 @@ class Processor(simpleSystem: SimpleSystem) {
             }
         }
 
-        /*
-        Load ACC kk : ACC <- KK
-        Add ACC kk : ACC <- ACC + KK
-        And ACC kk : ACC <- ACC & KK
-        Sub ACC kk : ACC <- ACC - KK
-        Input ACC pp : ACC <- M[PP]
-        Output ACC pp : M[PP] <- ACC
-        Jump U aa : PC <- AA
-        Jump Z aa : IF Z=1 PC <- AA ELSE PC <- PC + 1
-        Jump C aa : IF C=1 PC <- AA ELSE PC <- PC + 1
-        Jump NZ aa : IF Z=0 PC <- AA ELSE PC <- PC + 1
-        Jump NC aa : IF C=0 PC <- AA ELSE PC <- PC + 1
-        */
-
         //Instruction_Decoder
         when(opcode){
-            Instruction.LOAD.opcode -> {
+            Instruction.LOAD.opcode ->     // Load ACC kk : ACC <- KK
                 acc = data
-            }
-            Instruction.ADD.opcode -> {
+
+            Instruction.ADD.opcode ->      // Add ACC kk : ACC <- ACC + KK
                 alu_s = 0b00000
-                acc = alu_v2(acc, data)
-            }
-            Instruction.AND.opcode -> {
+
+            Instruction.AND.opcode ->      // And ACC kk : ACC <- ACC & KK
                 alu_s = 0b00001
-                acc = alu_v2(acc, data)
-            }
-            Instruction.SUB.opcode -> {
+
+            Instruction.SUB.opcode ->      // Sub ACC kk : ACC <- ACC - KK
                 alu_s = 0b01100
-                acc = alu_v2(acc, data)
-            }
-            Instruction.INPUT.opcode -> {
+
+            Instruction.INPUT.opcode -> {  // Input ACC pp : ACC <- M[PP]
                 alu_s = 0b00010 // INPUT A
-                alu_s = 0b00011 // INPUT B
-                alu_s = 0b10000 // INPUT A
-                acc = alu_v2(acc, data)
+//                alu_s = 0b00011 // INPUT B
+//                alu_s = 0b10000 // INPUT A
             }
-            Instruction.OUTPUT.opcode -> {
+
+            Instruction.OUTPUT.opcode ->    // Output ACC pp : M[PP] <- ACC
                 alu_s = 0b00010 // OUTPUT A
-//                acc = alu_v2(acc, data)
-            }
-            Instruction.JUMPU.opcode -> {
-            }
-            Instruction.JUMPZ.opcode -> {
-            }
-            Instruction.JUMPC.opcode -> {
-            }
-            Instruction.JUMPNZ.opcode -> {
-            }
-            Instruction.JUMPNC.opcode -> {
-            }
+
+            Instruction.JUMPU.opcode ->     // Jump U aa : PC <- AA
+                pc = data
+
+            Instruction.JUMPZ.opcode ->     // Jump Z aa : IF Z=1 PC <- AA ELSE PC <- PC + 1
+                pc = if (zero) data else (pc + 1).toByte()
+
+            Instruction.JUMPC.opcode ->     // Jump C aa : IF C=1 PC <- AA ELSE PC <- PC + 1
+                pc = if (carry) data else (pc + 1).toByte()
+
+            Instruction.JUMPNZ.opcode ->    // Jump NZ aa : IF Z=0 PC <- AA ELSE PC <- PC + 1
+                pc = if (!zero) data else (pc + 1).toByte()
+
+            Instruction.JUMPNC.opcode ->    // Jump NC aa : IF C=0 PC <- AA ELSE PC <- PC + 1
+                pc = if (!carry) data else (pc + 1).toByte()
+
             else -> {
                 fault("ERROR INSTRUCTION NOT FOUND ($opString - $dataString)")
                 throw Exception("EXCEPTION: INSTRUCTION NOT FOUND ($opString - $dataString)")
             }
         }
+        if (opcode != Instruction.LOAD.opcode)
+            acc = alu_v2(acc, data)
 
     }
 

@@ -6,11 +6,8 @@ Ispired by http://www.simplecpudesign.com/simple_cpu_v1/
 ## Architecture
 <img src="http://www.simplecpudesign.com/simple_cpu_v1/Images/arch.jpg" alt="Architecture" width="600">
 
+## Ready System
 <img src="http://www.simplecpudesign.com/simple_cpu_v1/Images/system.jpg" alt="Architecture" width="600">
-
-### RAM
-<img src="http://www.simplecpudesign.com/simple_cpu_v1/Images/ram.jpg" alt="Ram" width="600">
-
 
 ### ALU
 
