@@ -47,6 +47,7 @@ class Processor(simpleSystem: SimpleSystem) {
             0b00.toByte() -> a
             0b01.toByte() -> b
             0b10.toByte() -> c
+            0b11.toByte() -> d
             else -> 0xFF.toByte()
         }
     }
