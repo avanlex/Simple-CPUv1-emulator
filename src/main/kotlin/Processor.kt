@@ -118,34 +118,9 @@ class Processor(simpleSystem: SimpleSystem) {
         val opString = opcode.toBinaryString
         val dataString = data.toBinaryString
 
-        val DEBUG = false
-
-        if (DEBUG) {
-            when (opcode) {
-                Instruction.LOAD.opcode,
-                Instruction.ADD.opcode,
-                Instruction.AND.opcode,
-                Instruction.SUB.opcode,
-                Instruction.INPUT.opcode,
-                Instruction.OUTPUT.opcode,
-                Instruction.JUMPU.opcode,
-                Instruction.JUMPZ.opcode,
-                Instruction.JUMPC.opcode,
-                Instruction.JUMPNZ.opcode,
-                Instruction.JUMPNC.opcode -> println(
-                    String.format(
-                        "%6s",
-                        Instruction.getName(opcode)
-                    ) + " " + opString + " " + dataString
-                )
-                else -> throw Exception("Exception: INSTRUCTION NOT FOUND ($opString - $dataString)")
-            }
-        }
-
         //Instruction_Decoder
         when(opcode){
-            Instruction.LOAD.opcode ->     // Load ACC kk : ACC <- KK
-                acc = data
+            Instruction.LOAD.opcode -> acc = data
 
             Instruction.ADD.opcode ->      // Add ACC kk : ACC <- ACC + KK
                 alu_s = 0b00000
@@ -158,6 +133,7 @@ class Processor(simpleSystem: SimpleSystem) {
 
             Instruction.INPUT.opcode -> {  // Input ACC pp : ACC <- M[PP]
                 alu_s = 0b00010 // INPUT A
+                // TODO fix input
 //                alu_s = 0b00011 // INPUT B
 //                alu_s = 0b10000 // INPUT A
             }
@@ -165,29 +141,29 @@ class Processor(simpleSystem: SimpleSystem) {
             Instruction.OUTPUT.opcode ->    // Output ACC pp : M[PP] <- ACC
                 alu_s = 0b00010 // OUTPUT A
 
-            Instruction.JUMPU.opcode ->     // Jump U aa : PC <- AA
-                pc = data
+            Instruction.JUMPU.opcode -> pc = data
 
-            Instruction.JUMPZ.opcode ->     // Jump Z aa : IF Z=1 PC <- AA ELSE PC <- PC + 1
-                pc = if (zero) data else (pc + 1).toByte()
+            Instruction.JUMPZ.opcode -> pc = if (zero) data else (pc + 1).toByte()
 
-            Instruction.JUMPC.opcode ->     // Jump C aa : IF C=1 PC <- AA ELSE PC <- PC + 1
-                pc = if (carry) data else (pc + 1).toByte()
+            Instruction.JUMPC.opcode -> pc = if (carry) data else (pc + 1).toByte()
 
-            Instruction.JUMPNZ.opcode ->    // Jump NZ aa : IF Z=0 PC <- AA ELSE PC <- PC + 1
-                pc = if (!zero) data else (pc + 1).toByte()
+            Instruction.JUMPNZ.opcode -> pc = if (!zero) data else (pc + 1).toByte()
 
-            Instruction.JUMPNC.opcode ->    // Jump NC aa : IF C=0 PC <- AA ELSE PC <- PC + 1
-                pc = if (!carry) data else (pc + 1).toByte()
+            Instruction.JUMPNC.opcode -> pc = if (!carry) data else (pc + 1).toByte()
 
             else -> {
                 fault("ERROR INSTRUCTION NOT FOUND ($opString - $dataString)")
                 throw Exception("EXCEPTION: INSTRUCTION NOT FOUND ($opString - $dataString)")
             }
         }
+
+        val muxa_dat = if (muxa) acc else pc
+        //val muxb_dat = if (muxb) mem else ir and 0xff.toShort() // MEM ??
+        val muxc_dat = if (muxc) pc else ir and 0xff.toShort()
         if (opcode != Instruction.LOAD.opcode)
             acc = alu_v2(acc, data)
 
+        println("Opcode = ${"%6s".format(Instruction.getName(opcode))}, data = 0b${data.toBinaryString}, acc = 0x${"%02X".format(acc)}")
     }
 
     /*
@@ -202,46 +178,9 @@ class Processor(simpleSystem: SimpleSystem) {
       0  0  1  0  0   ADD (A+B)+1
       0  1  0  0  0   SUBTRACT (A-B)-1
      */
-    fun alu_v2(a: Byte, b: Byte, s0: Boolean, s1: Boolean, s2: Boolean, s3: Boolean, s4: Boolean): Byte {
-        var alu_data = 0.toByte()
-        var bits = 0
-        if (s0) {bits = bits or (1 shl 0)}
-        if (s1) {bits = bits or (1 shl 1)}
-        if (s2) {bits = bits or (1 shl 2)}
-        if (s3) {bits = bits or (1 shl 3)}
-        if (s4) {bits = bits or (1 shl 4)}
-        when (bits and 0x1F){
-            0b00000 -> {alu_data = (a + b).toByte()} // ADD (A+B)
-            0b00001 -> {alu_data = a and b} // BITWISE AND (A&B)
-            0b00010 -> {alu_data = a } // INPUT A
-            0b00011 -> {alu_data = b } // INPUT B
-            0b01100 -> {alu_data = (a.toByte() - b.toByte()).toByte() // SUBTRACT (A-B)
-            }
-            0b10100 -> {alu_data = (a.toByte() + 1.toByte()).toByte() // INCREMENT (A+1)
-            }
-            0b10000 -> {alu_data = a } // INPUT A
-            0b00100 -> {
-                alu_data = (a.toByte() + b.toByte() + 1.toByte()) // ADD (A+B)+1
-                    .toByte()
-            }
-            0b01000 -> {
-                alu_data = (a.toByte() - b.toByte() - 1.toByte()) // SUBTRACT (A-B)-1
-                    .toByte()
-            }
-        }
-        return alu_data
-    }
-
     fun alu_v2(a: Byte, b: Byte): Byte {
         var alu_data = 0.toByte()
         var bits = alu_s.toInt() and 0x1F
-        /*
-        if (alu_s0) {bits = bits or (1 shl 0)}
-        if (alu_s1) {bits = bits or (1 shl 1)}
-        if (alu_s2) {bits = bits or (1 shl 2)}
-        if (alu_s3) {bits = bits or (1 shl 3)}
-        if (alu_s4) {bits = bits or (1 shl 4)}
-        */
         when (bits and 0x1F){
             0b00000 -> {alu_data = (a + b).toByte()} // ADD (A+B)
             0b00001 -> {alu_data = a and b} // BITWISE AND (A&B)
